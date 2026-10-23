@@ -22,17 +22,13 @@ export default async function handler(req, res) {
       throw new Error("CLOUDFLARE_ACCOUNT_ID or CLOUDFLARE_API_TOKEN is missing in environment variables");
     }
 
-    // সংবেদনশীল ও ক্ষতিকর শব্দ ফিল্টার করে নিরাপদ ইংরেজি প্রম্পট তৈরি
     let sanitizedPrompt = rawPrompt
       .replace(/[\r\n]+/g, " ")
-      .replace(/[^\x00-\x7F]/g, "") // নন-ASCII বা বাংলা ক্যারেক্টার বাদ দিয়ে ক্লিন করা
+      .replace(/[^\x00-\x7F]/g, "")
       .trim();
 
-    // প্রম্পট যদি সম্পূর্ণ বাংলায় থাকে বা ফিল্টারে ফাঁকা হয়ে যায়, তবে নিরাপদ ডিফল্ট প্রম্পট যুক্ত হবে
     if (!sanitizedPrompt || sanitizedPrompt.length < 5) {
-      sanitizedPrompt = "A cozy, cinematic, aesthetically pleasing modern everyday lifestyle scene, high resolution, warm ambient lighting, 8k photography";
-    } else {
-      sanitizedPrompt = `${sanitizedPrompt}, safe for work, aesthetic composition, cinematic lighting, 8k`;
+      sanitizedPrompt = "A cozy, cinematic, aesthetic landscape, high resolution, 8k photography";
     }
 
     const response = await fetch(
@@ -57,15 +53,36 @@ export default async function handler(req, res) {
         const parsed = JSON.parse(errText);
         msg = parsed.errors?.[0]?.message || errText;
       } catch (_) {}
-      
-      if (msg.includes("NSFW")) {
-        throw new Error("Prompt triggered safety filters. Please use a neutral, family-friendly prompt.");
-      }
       throw new Error(`Cloudflare error (${response.status}): ${msg}`);
     }
 
-    const arrayBuffer = await response.arrayBuffer();
-    const b64 = Buffer.from(arrayBuffer).toString("base64");
+    const contentType = response.headers.get("content-type") || "";
+    let b64 = "";
+
+    // Cloudflare JSON { result: { image: "..." } } পাঠালে তা সরাসরি নেওয়া হচ্ছে
+    if (contentType.includes("application/json")) {
+      const json = await response.json();
+      b64 = json.result?.image || json.image || "";
+    } else {
+      // বাইনারি পাঠালে Buffer থেকে Base64 করা হচ্ছে
+      const arrayBuffer = await response.arrayBuffer();
+      const rawText = Buffer.from(arrayBuffer).toString("utf8");
+      
+      // সেফটি চেক: যদি বাফারের ভেতর লুকানো JSON থাকে
+      if (rawText.trim().startsWith("{")) {
+        try {
+          const parsed = JSON.parse(rawText);
+          b64 = parsed.result?.image || parsed.image || "";
+        } catch (_) {
+          b64 = Buffer.from(arrayBuffer).toString("base64");
+        }
+      } else {
+        b64 = Buffer.from(arrayBuffer).toString("base64");
+      }
+    }
+
+    if (!b64) throw new Error("Could not extract image data from Cloudflare response");
+
     const imageUrl = `data:image/jpeg;base64,${b64}`;
 
     return send(res, 200, {
