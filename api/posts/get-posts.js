@@ -41,22 +41,27 @@ export default async function handler(req, res) {
     const db = dbClient();
     const cred = await db.collection("settings").doc("meta_credentials").get();
 
-    // পেজ কানেক্ট না থাকলে ফ্রন্টএন্ড যাতে সঠিকভাবে ডিসকানেক্টেড স্টেট দেখায়
     if (!cred.exists) {
-   return send(res, 200, {
-      success: true,
-      pageConnected: true, // <-- posts.js ei root property khoje
-      pageName: c.pageName || "Active Facebook Page",
-      data: {
-        pageConnected: true,
-        pageName: c.pageName || "Active Facebook Page",
-        live: livePosts,
-        published: livePosts,
-        facebookScheduled: scheduled.data || [],
-        queue: queue.docs.map(d => ({ id: d.id, ...d.data() }))
-      },
-      error: null
-    });
+      return send(res, 200, {
+        success: true,
+        pageConnected: false,
+        pageName: "Not Connected",
+        publishedToday: 0,
+        dailyUsed: 0,
+        dailyLimit: 5,
+        data: {
+          pageConnected: false,
+          pageName: "Not Connected",
+          publishedToday: 0,
+          dailyUsed: 0,
+          dailyLimit: 5,
+          live: [],
+          published: [],
+          facebookScheduled: [],
+          queue: []
+        },
+        error: null
+      });
     }
 
     const c = cred.data();
@@ -70,14 +75,25 @@ export default async function handler(req, res) {
 
     const livePosts = live.data || [];
 
+    // আজকের তারিখ (UTC/ISO) বের করে আজকের পোস্ট সংখ্যা গণনা
+    const todayStr = new Date().toISOString().split("T")[0];
+    const todayPublishedCount = livePosts.filter(p => p.created_time && p.created_time.startsWith(todayStr)).length;
+
     return send(res, 200, {
       success: true,
+      pageConnected: true,
+      pageName: c.pageName || "Active Facebook Page",
+      publishedToday: todayPublishedCount,
+      dailyUsed: todayPublishedCount,
+      dailyLimit: 5,
       data: {
-        // ফ্রন্টএন্ড posts.js এর স্টেটাস এবং ট্যাবের সাথে সরাসরি ম্যাপিং
         pageConnected: true,
         pageName: c.pageName || "Active Facebook Page",
+        publishedToday: todayPublishedCount,
+        dailyUsed: todayPublishedCount,
+        dailyLimit: 5,
         live: livePosts,
-        published: livePosts, // extractLists সহজে রিকগনাইজ করে 'Published Log' ট্যাবে পোস্ট দেখানোর জন্য
+        published: livePosts,
         facebookScheduled: scheduled.data || [],
         queue: queue.docs.map(d => ({ id: d.id, ...d.data() }))
       },
