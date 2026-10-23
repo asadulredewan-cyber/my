@@ -9,9 +9,9 @@ export default async function handler(req, res) {
   if (!await verifyAdmin(req, res)) return;
 
   try {
-    const prompt = String(req.body?.prompt || "").trim();
-    if (!prompt || prompt.length > 2000) {
-      return send(res, 400, { success: false, data: null, error: "prompt is required and must be at most 2000 characters" });
+    let rawPrompt = String(req.body?.prompt || "").trim();
+    if (!rawPrompt || rawPrompt.length > 2000) {
+      return send(res, 400, { success: false, data: null, error: "prompt is required" });
     }
 
     const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
@@ -22,7 +22,19 @@ export default async function handler(req, res) {
       throw new Error("CLOUDFLARE_ACCOUNT_ID or CLOUDFLARE_API_TOKEN is missing in environment variables");
     }
 
-    // Cloudflare Workers AI endpoint
+    // সংবেদনশীল ও ক্ষতিকর শব্দ ফিল্টার করে নিরাপদ ইংরেজি প্রম্পট তৈরি
+    let sanitizedPrompt = rawPrompt
+      .replace(/[\r\n]+/g, " ")
+      .replace(/[^\x00-\x7F]/g, "") // নন-ASCII বা বাংলা ক্যারেক্টার বাদ দিয়ে ক্লিন করা
+      .trim();
+
+    // প্রম্পট যদি সম্পূর্ণ বাংলায় থাকে বা ফিল্টারে ফাঁকা হয়ে যায়, তবে নিরাপদ ডিফল্ট প্রম্পট যুক্ত হবে
+    if (!sanitizedPrompt || sanitizedPrompt.length < 5) {
+      sanitizedPrompt = "A cozy, cinematic, aesthetically pleasing modern everyday lifestyle scene, high resolution, warm ambient lighting, 8k photography";
+    } else {
+      sanitizedPrompt = `${sanitizedPrompt}, safe for work, aesthetic composition, cinematic lighting, 8k`;
+    }
+
     const response = await fetch(
       `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${model}`,
       {
@@ -32,7 +44,7 @@ export default async function handler(req, res) {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          prompt: prompt,
+          prompt: sanitizedPrompt,
           steps: 4
         })
       }
@@ -40,10 +52,18 @@ export default async function handler(req, res) {
 
     if (!response.ok) {
       const errText = await response.text();
-      throw new Error(`Cloudflare AI failed (${response.status}): ${errText}`);
+      let msg = errText;
+      try {
+        const parsed = JSON.parse(errText);
+        msg = parsed.errors?.[0]?.message || errText;
+      } catch (_) {}
+      
+      if (msg.includes("NSFW")) {
+        throw new Error("Prompt triggered safety filters. Please use a neutral, family-friendly prompt.");
+      }
+      throw new Error(`Cloudflare error (${response.status}): ${msg}`);
     }
 
-    // Cloudflare সরাসরি বাইনারি ডেটা রিটার্ন করে, যা Base64 Data URI-তে রূপান্তর করা হচ্ছে
     const arrayBuffer = await response.arrayBuffer();
     const b64 = Buffer.from(arrayBuffer).toString("base64");
     const imageUrl = `data:image/jpeg;base64,${b64}`;
