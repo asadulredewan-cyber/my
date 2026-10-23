@@ -43,18 +43,20 @@ export default async function handler(req, res) {
 
     // পেজ কানেক্ট না থাকলে ফ্রন্টএন্ড যাতে সঠিকভাবে ডিসকানেক্টেড স্টেট দেখায়
     if (!cred.exists) {
-      return send(res, 200, {
-        success: true,
-        data: {
-          pageConnected: false,
-          pageName: "Not Connected",
-          live: [],
-          published: [],
-          facebookScheduled: [],
-          queue: []
-        },
-        error: null
-      });
+   return send(res, 200, {
+      success: true,
+      pageConnected: true, // <-- posts.js ei root property khoje
+      pageName: c.pageName || "Active Facebook Page",
+      data: {
+        pageConnected: true,
+        pageName: c.pageName || "Active Facebook Page",
+        live: livePosts,
+        published: livePosts,
+        facebookScheduled: scheduled.data || [],
+        queue: queue.docs.map(d => ({ id: d.id, ...d.data() }))
+      },
+      error: null
+    });
     }
 
     const c = cred.data();
