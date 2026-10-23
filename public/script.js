@@ -163,17 +163,21 @@ async function connectFacebook() {
   if (button) { button.disabled = true; button.dataset.originalText = button.textContent; button.textContent = "Connecting…"; }
   try {
     const FB = await loadFacebookSdk();
-    const result = await new Promise((resolve, reject) => {
+const result = await new Promise((resolve, reject) => {
       FB.login(response => response?.authResponse ? resolve(response) : reject(new Error("Facebook authorization was cancelled or not granted.")), {
-        scope: "pages_show_list,pages_manage_posts,pages_read_engagement,pages_messaging",
+        // pages_messaging পারমিশন এরর এড়াতে এখান থেকে বাদ রাখা হয়েছে
+        scope: "pages_show_list,pages_manage_posts,pages_read_engagement",
         return_scopes: true
       });
     });
     const userToken = result.authResponse.accessToken;
-    // Exchange happens on the backend. Do not save this token to browser storage.
+    
+    // Exchange happens on the backend.
     const response = await fetchWithAuth("/api/auth/fb-exchange-token", {
       method: "POST",
-      body: JSON.stringify({ accessToken: userToken })
+      body: JSON.stringify({ 
+        shortLivedToken: userToken // <-- এখানে accessToken এর জায়গায় shortLivedToken দিন
+      })
     });
     const payload = await response.json().catch(() => ({}));
     if (!response.ok || payload.success === false) throw new Error(payload.error || payload.message || "Facebook token exchange failed.");
