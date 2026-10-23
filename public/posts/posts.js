@@ -134,7 +134,6 @@ function escapeHtml(value = "") {
 }
 
 function normalisePost(post = {}) {
-  // ফেসবুকের লাইভ/পাবলিশড পোস্টে created_time থাকলে সেটিকে published স্ট্যাটাস দিন
   const isFbLive = Boolean(post.created_time || post.permalink_url);
   const derivedStatus = isFbLive ? "published" : (post.status || post.state || "queued");
 
@@ -142,7 +141,6 @@ function normalisePost(post = {}) {
     id: post.id || post.postId || "",
     caption: post.caption || post.message || post.text || "(No caption)",
     status: derivedStatus,
-    // created_time যুক্ত করা হয়েছে যাতে ফেসবুক পোস্টের সঠিক সময় ডিসপ্লে করে
     scheduledAt: post.scheduledAt || post.scheduled_time || post.scheduled_publish_time || post.created_time || post.createdAt || "",
     imageUrl: post.imageUrl || post.full_picture || post.image || "",
     source: post.source || (isFbLive ? "facebook" : "")
@@ -210,14 +208,21 @@ function extractLists(payload = {}) {
   }
   return { facebookScheduled, firebaseQueue, published };
 }
-
 function updateSummary(payload) {
   const lists = state.data;
-  const publishedToday = Number(payload?.publishedToday ?? payload?.stats?.publishedToday ?? lists.published.length);
-  const queueCount = Number(payload?.queueCount ?? payload?.stats?.queueCount ?? lists.firebaseQueue.length);
-  const fbCount = Number(payload?.facebookScheduledCount ?? payload?.stats?.facebookScheduledCount ?? lists.facebookScheduled.length);
-  const limit = Number(payload?.dailyLimit ?? payload?.stats?.dailyLimit ?? 5);
-  const used = Number(payload?.dailyUsed ?? payload?.stats?.dailyUsed ?? publishedToday);
+  
+  // আজকের তারিখ অনুযায়ী ফিল্টার করা
+  const todayDateStr = new Date().toISOString().split("T")[0];
+  const actualTodayCount = lists.published.filter(p => {
+    const time = p.created_time || p.scheduledAt || p.createdAt || "";
+    return typeof time === "string" && time.startsWith(todayDateStr);
+  }).length;
+
+  const publishedToday = Number(payload?.publishedToday ?? payload?.data?.publishedToday ?? actualTodayCount);
+  const queueCount = Number(payload?.queueCount ?? payload?.data?.queueCount ?? lists.firebaseQueue.length);
+  const fbCount = Number(payload?.facebookScheduledCount ?? payload?.data?.facebookScheduledCount ?? lists.facebookScheduled.length);
+  const limit = Number(payload?.dailyLimit ?? payload?.data?.dailyLimit ?? 5);
+  const used = Number(payload?.dailyUsed ?? payload?.data?.dailyUsed ?? publishedToday);
 
   $("#publishedCount").textContent = String(publishedToday);
   $("#queueCount").textContent = String(queueCount);
@@ -229,7 +234,7 @@ function updateSummary(payload) {
   $("#queueTabCount").textContent = String(lists.firebaseQueue.length);
   $("#publishedTabCount").textContent = String(lists.published.length);
 
- const connected = payload?.pageConnected ?? payload?.data?.pageConnected ?? payload?.connected ?? payload?.page?.connected ?? payload?.data?.page?.connected;
+  const connected = payload?.pageConnected ?? payload?.data?.pageConnected ?? payload?.connected ?? payload?.page?.connected ?? payload?.data?.page?.connected;
   const pageStatus = $("#pageStatus");
   if (connected === true) {
     pageStatus.className = "status-pill status-connected";
@@ -242,7 +247,6 @@ function updateSummary(payload) {
     pageStatus.innerHTML = '<span class="status-dot"></span> Status unavailable';
   }
 }
-
 function currentList() {
   if (state.tab === "firebase") return state.data.firebaseQueue;
   if (state.tab === "published") return state.data.published;
