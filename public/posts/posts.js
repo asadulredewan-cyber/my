@@ -636,6 +636,84 @@ async function generateAllBulkCaptions() {
   }
 }
 
+
+async function createFivePostsFromIdea() {
+  const idea = $("#sharedBulkIdea").value.trim();
+  if (!idea) return toast("আগে একটি topic বা caption idea লিখুন।", "error");
+  if (state.busy) return;
+
+  const button = $("#createFivePostsBtn");
+  state.busy = true;
+  setBusy(button, true, "Creating 5 posts…");
+  const created = [];
+  try {
+    for (let i = 0; i < 5; i++) {
+      const isImagePost = i < 2;
+      const captionPayload = await apiRequest(API.caption, {
+        method: "POST",
+        body: JSON.stringify({
+          caption: idea,
+          context: [
+            `Create post ${i + 1} of a coordinated set of 5 distinct Facebook Page posts.`,
+            "Write premium-quality, natural, engaging copy. Each post must have a different angle and must not repeat the others.",
+            "Include exactly 5 relevant popular/trending-style hashtags at the end. Hashtags should be relevant to the topic and audience; do not claim live trend verification.",
+            isImagePost ? "This post will include an image; write a caption that pairs naturally with a premium visual." : "This is a text-only post; do not refer to an attached image.",
+            "Return only the finished caption, no headings or explanation."
+          ].join(" ")
+        })
+      });
+      const caption = captionPayload.caption || captionPayload.text ||
+        captionPayload.data?.caption || captionPayload.data?.text;
+      if (!caption) throw new Error(`Gemini returned no caption for post ${i + 1}.`);
+
+      let imageUrl = "";
+      if (isImagePost) {
+        const imagePayload = await apiRequest(API.image, {
+          method: "POST",
+          body: JSON.stringify({
+            prompt: `Create a premium, polished, scroll-stopping Facebook post visual about: ${idea}. Variation ${i + 1} of 2, visually distinct composition, high quality, no fake logos, no watermark, avoid rendering text in the image.`,
+            count: 1
+          })
+        });
+        imageUrl = imagePayload.url || imagePayload.imageUrl || imagePayload.image_url ||
+          imagePayload.data?.url || imagePayload.data?.imageUrl ||
+          imagePayload.images?.[0]?.url || imagePayload.data?.images?.[0]?.url || "";
+        if (!imageUrl || !isValidUrl(imageUrl)) {
+          throw new Error(`Image generation returned no valid URL for post ${i + 1}.`);
+        }
+      }
+
+      const scheduled = new Date(Date.now() + 30 * 60 * 1000 + i * 24 * 60 * 60 * 1000);
+      scheduled.setSeconds(0, 0);
+      created.push({
+        caption,
+        imageUrl,
+        topic: `${idea} — angle ${i + 1}`,
+        imagePrompt: isImagePost ? `Premium Facebook visual about ${idea}` : "",
+        scheduleAt: toDateInputValue(scheduled)
+      });
+    }
+
+    $("#bulkEntries").replaceChildren();
+    created.forEach(post => {
+      const entry = makeBulkEntry(post);
+      if (!post.imageUrl) {
+        $(".bulk-image-prompt-field", entry).classList.add("hidden");
+      } else {
+        $(".bulk-generated-image", entry).src = post.imageUrl;
+        $(".bulk-image-preview", entry).classList.remove("hidden");
+      }
+    });
+    switchMode("bulk");
+    toast("5টি post তৈরি হয়েছে: 2টি image post + 3টি text-only post। Schedule করার আগে সময় ও caption দেখে নিন।", "success", 6500);
+  } catch (error) {
+    toast(error.message || "Could not create the five posts.", "error", 6500);
+  } finally {
+    state.busy = false;
+    setBusy(button, false);
+  }
+}
+
 function bindEvents() {
   $("#singleModeBtn").addEventListener("click", () => switchMode("single"));
   $("#bulkModeBtn").addEventListener("click", () => switchMode("bulk"));
@@ -645,6 +723,7 @@ function bindEvents() {
   $("#generateCaptionBtn").addEventListener("click", generateCaption);
   $("#generateImageBtn").addEventListener("click", generateImage);
   $("#generateAllCaptionsBtn").addEventListener("click", generateAllBulkCaptions);
+  $("#createFivePostsBtn").addEventListener("click", createFivePostsFromIdea);
   $("#bulkEntries").addEventListener("click", event => {
     const entry = event.target.closest(".bulk-entry");
     if (!entry) return;
