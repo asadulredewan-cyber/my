@@ -1,7 +1,6 @@
 import { db } from '../../lib/firebase-admin.js';
 
 export default async function handler(req, res) {
-  // CORS & Header handling
   if (req.method !== 'GET') {
     return res.status(405).json({ success: false, error: 'Method not allowed' });
   }
@@ -16,7 +15,9 @@ export default async function handler(req, res) {
       const metaDoc = await db.collection('settings').doc('meta_credentials').get();
       if (metaDoc.exists) {
         const data = metaDoc.data();
-        if (data && data.pageAccessToken) {
+        
+        // এখানে pageAccessTokenEncrypted চেক করা হয়েছে
+        if (data && (data.pageAccessTokenEncrypted || data.pageAccessToken)) {
           pageConnected = true;
           pageName = data.pageName || "Active Facebook Page";
           tokenStatus = "valid";
@@ -26,7 +27,7 @@ export default async function handler(req, res) {
       console.warn("Could not fetch meta credentials:", e.message);
     }
 
-    // আজকের তারিখ অনুযায়ী পোস্ট কাউন্ট ফেচ
+    // আজকের তারিখ অনুযায়ী পোস্ট কাউন্ট ফেচ
     const todayStr = new Date().toISOString().split('T')[0];
     let dailyUsed = 0;
     try {
