@@ -14,36 +14,38 @@ export default async function handler(req, res) {
       return send(res, 400, { success: false, data: null, error: "prompt is required and must be at most 2000 characters" });
     }
 
-    const key = process.env.GEMINI_API_KEY || process.env.GOOGLE_CLOUD_API_KEY;
-    if (!key) {
-      throw new Error("GEMINI_API_KEY is not configured in environment variables");
+    const accountId = process.env.CLOUDFLARE_ACCOUNT_ID;
+    const apiToken = process.env.CLOUDFLARE_API_TOKEN;
+    const model = process.env.CLOUDFLARE_IMAGE_MODEL || "@cf/black-forest-labs/flux-1-schnell";
+
+    if (!accountId || !apiToken) {
+      throw new Error("CLOUDFLARE_ACCOUNT_ID or CLOUDFLARE_API_TOKEN is missing in environment variables");
     }
 
-    // Google AI Imagen REST API (বিদ্যমান GEMINI_API_KEY দিয়েই কাজ করবে)
-    const imagenUrl = `https://generativelanguage.googleapis.com/v1beta/models/imagen-3.0-generate-002:predict?key=${key}`;
+    // Cloudflare Workers AI endpoint
+    const response = await fetch(
+      `https://api.cloudflare.com/client/v4/accounts/${accountId}/ai/run/${model}`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiToken}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          prompt: prompt,
+          steps: 4
+        })
+      }
+    );
 
-    const response = await fetch(imagenUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        instances: [{ prompt }],
-        parameters: {
-          sampleCount: 1,
-          aspectRatio: "1:1",
-          outputMimeType: "image/jpeg"
-        }
-      })
-    });
-
-    const data = await response.json().catch(() => ({}));
-    if (!response.ok || data.error) {
-      throw new Error(data.error?.message || `Imagen request failed (${response.status})`);
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`Cloudflare AI failed (${response.status}): ${errText}`);
     }
 
-    const b64 = data.predictions?.[0]?.bytesBase64Encoded;
-    if (!b64) throw new Error("No image data returned from model");
-
-    // কোনো আলাদা ক্লাউড স্টোরেজ ছাড়া সরাসরি Data URI ফরম্যাট
+    // Cloudflare সরাসরি বাইনারি ডেটা রিটার্ন করে, যা Base64 Data URI-তে রূপান্তর করা হচ্ছে
+    const arrayBuffer = await response.arrayBuffer();
+    const b64 = Buffer.from(arrayBuffer).toString("base64");
     const imageUrl = `data:image/jpeg;base64,${b64}`;
 
     return send(res, 200, {
@@ -55,6 +57,6 @@ export default async function handler(req, res) {
       error: null
     });
   } catch (e) {
-    return send(res, 500, { success: false, data: null, error: e.message || "Image generation failed" });
+    return send(res, 500, { success: false, data: null, error: e.message || "Cloudflare image generation failed" });
   }
 }
