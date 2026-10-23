@@ -2,7 +2,6 @@ import * as Firebase from "../../lib/firebase-admin.js";
 import * as Facebook from "../../lib/facebook.js";
 import { verifyAdmin } from "../auth/verify-admin.js";
 import { createDecipheriv } from "node:crypto";
-import { GoogleGenAI } from "@google/genai";
 
 const send = (res, s, b) => res.status(s).json(b);
 const dbClient = () =>
@@ -37,19 +36,17 @@ async function graph(path, token, params) {
 
 export default async function handler(req, res) {
   if (req.method !== "POST") return send(res, 405, { success: false, data: null, error: "Method not allowed" });
-  if (!await verifyAdmin(req, res)) return;
+  if (!(await verifyAdmin(req, res))) return;
 
   try {
     const body = req.body || {};
 
-    // 1. GEMINI CAPTION GENERATION (Jodi caption ba context pathano hoy)
+    // ১. GEMINI CAPTION GENERATION (সরাসরি REST API দিয়ে, প্যাকেজ ছাড়া)
     if (body.caption !== undefined || body.context !== undefined) {
       const apiKey = process.env.GEMINI_API_KEY;
-      if (!apiKey) throw Error("GEMINI_API_KEY is not configured");
+      if (!apiKey) throw Error("GEMINI_API_KEY is not configured in Vercel Environment Variables");
 
       const promptTopic = String(body.caption || "").trim();
-      const ai = new GoogleGenAI({ apiKey });
-
       const prompt = `
 System / Context: ${body.context || "You are an expert social media manager for a Bengali Facebook Page. Write an engaging, natural, high-quality post caption."}
 
@@ -61,23 +58,35 @@ Instructions:
 - Return ONLY the finalized caption text without quotes, markdown headers, or explanation.
 `;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: prompt
-      });
+      const geminiRes = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: prompt }] }]
+          })
+        }
+      );
 
-      const generatedText = response.text?.trim() || "";
+      const geminiData = await geminiRes.json().catch(() => ({}));
+      if (!geminiRes.ok || geminiData.error) {
+        throw Error(geminiData.error?.message || `Gemini API error (${geminiRes.status})`);
+      }
+
+      const generatedText = geminiData.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
       if (!generatedText) throw Error("Gemini returned an empty caption");
 
       return send(res, 200, {
         success: true,
         caption: generatedText,
-        data: { caption: generatedText },
+        text: generatedText,
+        data: { caption: generatedText, text: generatedText },
         error: null
       });
     }
 
-    // 2. FACEBOOK MANUAL & BULK SCHEDULING
+    // ২. FACEBOOK POST SCHEDULING
     const posts = body.posts;
     if (!Array.isArray(posts) || !posts.length || posts.length > 100) {
       return send(res, 400, { success: false, data: null, error: "posts must be an array containing 1–100 items" });
