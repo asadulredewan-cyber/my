@@ -449,9 +449,10 @@ async function submitSchedule(event) {
 }
 
 function isValidUrl(value) {
+  if (typeof value === "string" && value.startsWith("data:image/")) return true;
   try {
     const url = new URL(value);
-    return url.protocol === "https:" || url.protocol === "http:";
+    return url.protocol === "https:" || url.protocol === "http:" || url.protocol === "data:";
   } catch {
     return false;
   }
