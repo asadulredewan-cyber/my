@@ -134,13 +134,18 @@ function escapeHtml(value = "") {
 }
 
 function normalisePost(post = {}) {
+  // ফেসবুকের লাইভ/পাবলিশড পোস্টে created_time থাকলে সেটিকে published স্ট্যাটাস দিন
+  const isFbLive = Boolean(post.created_time || post.permalink_url);
+  const derivedStatus = isFbLive ? "published" : (post.status || post.state || "queued");
+
   return {
     id: post.id || post.postId || "",
     caption: post.caption || post.message || post.text || "(No caption)",
-    status: post.status || post.state || "queued",
-    scheduledAt: post.scheduledAt || post.scheduled_at || post.publishAt || post.createdAt || "",
+    status: derivedStatus,
+    // created_time যুক্ত করা হয়েছে যাতে ফেসবুক পোস্টের সঠিক সময় ডিসপ্লে করে
+    scheduledAt: post.scheduledAt || post.scheduled_time || post.scheduled_publish_time || post.created_time || post.createdAt || "",
     imageUrl: post.imageUrl || post.full_picture || post.image || "",
-    source: post.source || ""
+    source: post.source || (isFbLive ? "facebook" : "")
   };
 }
 
