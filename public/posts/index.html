@@ -1,0 +1,148 @@
+<!doctype html>
+<html lang="bn">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark light">
+  <title>Posts Management · FB Autopilot</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <header class="topbar">
+      <div class="brand">
+        <div class="brand-mark" aria-hidden="true">P</div>
+        <div>
+          <p class="eyebrow">MY FB AUTOPILOT</p>
+          <h1>Posts Management</h1>
+        </div>
+      </div>
+      <div class="header-actions">
+        <span id="pageStatus" class="status-pill status-muted"><span class="status-dot"></span> Checking page</span>
+        <button id="refreshBtn" class="btn btn-quiet" type="button">↻ Refresh</button>
+      </div>
+    </header>
+
+    <main>
+      <section class="summary-grid" aria-label="Post summary">
+        <article class="summary-card">
+          <div class="summary-top"><span>Today's published</span><span class="summary-icon green">↗</span></div>
+          <div class="summary-value" id="publishedCount">—</div>
+          <p class="summary-note">Published log for today</p>
+        </article>
+        <article class="summary-card">
+          <div class="summary-top"><span>Firebase queue</span><span class="summary-icon blue">◷</span></div>
+          <div class="summary-value" id="queueCount">—</div>
+          <p class="summary-note">Waiting to be processed</p>
+        </article>
+        <article class="summary-card">
+          <div class="summary-top"><span>Facebook scheduled</span><span class="summary-icon purple">▤</span></div>
+          <div class="summary-value" id="fbScheduledCount">—</div>
+          <p class="summary-note">Scheduled on Facebook</p>
+        </article>
+        <article class="summary-card limit-card">
+          <div class="summary-top"><span>Daily post limit</span><strong id="dailyLimitText">0 / 5 Used</strong></div>
+          <div class="progress-track"><div id="dailyLimitBar" class="progress-fill" style="width:0%"></div></div>
+          <p class="summary-note">Limit is configurable by the backend</p>
+        </article>
+      </section>
+
+      <div class="workspace">
+        <section class="panel composer-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="eyebrow">COMPOSER</p>
+              <h2>Create and schedule</h2>
+            </div>
+            <span class="live-label"><span class="status-dot"></span> Ready</span>
+          </div>
+
+          <div class="mode-switch" role="tablist" aria-label="Scheduling mode">
+            <button class="mode-btn is-active" id="singleModeBtn" type="button" role="tab" aria-selected="true">Single post</button>
+            <button class="mode-btn" id="bulkModeBtn" type="button" role="tab" aria-selected="false">Bulk schedule</button>
+          </div>
+
+          <form id="singleForm" class="composer-form">
+            <label for="captionInput">Caption <span class="required">*</span></label>
+            <textarea id="captionInput" rows="5" maxlength="63206" placeholder="Write your Facebook post caption..." required></textarea>
+            <div class="field-meta"><span>Use clear, page-appropriate copy.</span><span id="captionCount">0 characters</span></div>
+
+            <div class="form-grid">
+              <div class="field">
+                <label for="scheduleAt">Schedule date &amp; time <span class="required">*</span></label>
+                <input id="scheduleAt" type="datetime-local" required>
+                <small>Choose a time at least 20 minutes from now.</small>
+              </div>
+              <div class="field">
+                <label for="imageUrl">Image URL <span class="optional">(optional)</span></label>
+                <input id="imageUrl" type="url" placeholder="https://…">
+                <small>Use a publicly accessible image URL.</small>
+              </div>
+            </div>
+
+            <div class="ai-box">
+              <div class="ai-box-heading">
+                <div><span class="ai-spark">✦</span><strong>AI tools</strong></div>
+                <span class="ai-caption">Backend-secured generation</span>
+              </div>
+              <div class="field">
+                <label for="imagePrompt">AI image prompt</label>
+                <textarea id="imagePrompt" rows="2" placeholder="Describe the image you want to generate…"></textarea>
+              </div>
+              <div class="button-row">
+                <button id="generateCaptionBtn" class="btn btn-secondary" type="button">✦ Generate via Gemini</button>
+                <button id="generateImageBtn" class="btn btn-secondary" type="button">▧ Generate AI image</button>
+              </div>
+              <div id="imagePreview" class="image-preview hidden">
+                <img id="generatedImage" alt="Generated image preview">
+                <div class="preview-details"><span>Generated image</span><button id="useImageBtn" class="text-btn" type="button">Use image URL</button></div>
+              </div>
+            </div>
+            <button class="btn btn-primary btn-full" type="submit"><span>＋</span> Schedule post</button>
+          </form>
+
+          <form id="bulkForm" class="composer-form hidden">
+            <div class="bulk-intro">
+              <div class="bulk-icon">▦</div>
+              <div><strong>Bulk post creator · Gemini + Cloudflare</strong><p>Add up to 20 posts. Enter a topic for each post, generate captions with Gemini, and generate images with Cloudflare before scheduling.</p></div>
+            </div>
+            <div class="bulk-toolbar">
+              <span id="bulkCount">1 of 20 posts</span>
+              <div class="button-row">
+                <button id="generateAllCaptionsBtn" class="btn btn-secondary" type="button">✦ Generate all captions</button>
+                <button id="addBulkBtn" class="btn btn-quiet" type="button">＋ Add post</button>
+                <label class="btn btn-quiet upload-label" for="csvInput">↑ Import CSV</label>
+                <input id="csvInput" class="visually-hidden" type="file" accept=".csv,text/csv">
+              </div>
+            </div>
+            <div id="bulkEntries" class="bulk-entries"></div>
+            <p class="hint">For AI captions, enter a topic in each post's Topic field. Use the image prompt and Generate image button to create a Cloudflare AI image. CSV columns: <code>caption,scheduleAt,imageUrl</code>.</p>
+            <button class="btn btn-primary btn-full" type="submit">Schedule all posts</button>
+          </form>
+        </section>
+
+        <section class="panel queue-panel">
+          <div class="panel-heading queue-heading">
+            <div><p class="eyebrow">PUBLISHING ACTIVITY</p><h2>Queue &amp; history</h2></div>
+            <button id="listRefreshBtn" class="icon-btn" type="button" aria-label="Refresh lists" title="Refresh lists">↻</button>
+          </div>
+          <div class="tabs" role="tablist" aria-label="Post lists">
+            <button class="tab-btn is-active" data-tab="facebook" type="button" role="tab" aria-selected="true">Facebook Scheduled <span id="fbTabCount">0</span></button>
+            <button class="tab-btn" data-tab="firebase" type="button" role="tab" aria-selected="false">Firebase Queue <span id="queueTabCount">0</span></button>
+            <button class="tab-btn" data-tab="published" type="button" role="tab" aria-selected="false">Published Log <span id="publishedTabCount">0</span></button>
+          </div>
+          <div id="listStatus" class="list-status">Loading posts…</div>
+          <div id="postList" class="post-list" aria-live="polite"></div>
+          <div id="emptyState" class="empty-state hidden">
+            <div class="empty-art">▤</div><strong>No posts to show</strong><p>Posts for this category will appear here.</p>
+          </div>
+        </section>
+      </div>
+      <footer class="footer-note">Keep Facebook and Gemini credentials on the server. The browser only calls authenticated API routes.</footer>
+    </main>
+  </div>
+
+  <div id="toastRegion" class="toast-region" aria-live="polite" aria-atomic="false"></div>
+  <script type="module" src="./posts.js"></script>
+</body>
+</html>

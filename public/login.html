@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>Sign in · MY FB Autopilot</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body class="auth-page">
+  <main class="auth-layout">
+    <section class="auth-brand-panel">
+      <a class="brand-lockup" href="./login.html" aria-label="MY FB Autopilot home">
+        <span class="brand-mark">F</span><span>MY FB <b>AUTOPILOT</b></span>
+      </a>
+      <div class="brand-message">
+        <span class="eyebrow">SOCIAL MANAGEMENT, SIMPLIFIED</span>
+        <h1>Your Facebook Page.<br><span>One control center.</span></h1>
+        <p>Manage scheduled posts, review conversations, and moderate comments from one secure workspace.</p>
+      </div>
+      <div class="feature-list">
+        <div><span class="feature-icon">✓</span><span><b>Secure admin access</b><small>Firebase Authentication</small></span></div>
+        <div><span class="feature-icon">↗</span><span><b>Page connection</b><small>Connect through Meta authorization</small></span></div>
+        <div><span class="feature-icon">✦</span><span><b>AI-assisted workflows</b><small>Server-side Gemini integration</small></span></div>
+      </div>
+      <p class="brand-footnote">Keep page access tokens and AI secrets on the server.</p>
+    </section>
+
+    <section class="auth-form-panel">
+      <div class="mobile-brand"><span class="brand-mark">F</span><span>MY FB <b>AUTOPILOT</b></span></div>
+      <div class="auth-card">
+        <div class="auth-heading"><span class="step-label">STEP 1 OF 2</span><h2>Admin sign in</h2><p>Use your authorized administrator account to continue.</p></div>
+        <form id="loginForm" novalidate>
+          <label for="email">Email address</label>
+          <input id="email" name="email" type="email" autocomplete="username" placeholder="admin@example.com" required>
+          <label for="password">Password</label>
+          <div class="password-field"><input id="password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required><button id="togglePassword" type="button" aria-label="Show password">Show</button></div>
+          <div class="form-meta"><label class="remember-label"><input id="remember" type="checkbox" checked> Keep me signed in</label><span class="secure-note">🔒 Secure connection</span></div>
+          <button id="loginButton" class="button button-primary button-full" type="submit">Sign in securely <span>→</span></button>
+          <p id="loginError" class="inline-error hidden" role="alert"></p>
+        </form>
+
+        <div class="auth-divider"><span></span><small>THEN CONNECT YOUR PAGE</small><span></span></div>
+        <div class="facebook-step">
+          <div class="facebook-mark">f</div>
+          <div class="facebook-copy"><b>Facebook Page authorization</b><small id="facebookHelp">Sign in first to enable page connection.</small></div>
+          <span id="facebookStepStatus" class="step-status">Locked</span>
+        </div>
+        <button id="connectFacebook" class="button button-facebook button-full" type="button" disabled>Connect Facebook Page</button>
+        <p class="permissions-note">Meta may ask you to review Page permissions. Only approve permissions required for your app's features.</p>
+        <p id="facebookError" class="inline-error hidden" role="alert"></p>
+      </div>
+      <p class="legal-note">Authorized administrators only. Access and actions may be logged.</p>
+    </section>
+  </main>
+
+  <div id="toast-container" aria-live="polite" aria-atomic="false"></div>
+   <script>
+    window.FB_APP_ID = "1367985248837418";
+  </script>
+  <!-- Configure Firebase in public/script.js and set window.FB_APP_ID in your deployment config. -->
+  <script async defer crossorigin="anonymous" src="https://connect.facebook.net/en_US/sdk.js"></script>
+  <script type="module" src="./script.js"></script>
+</body>
+</html>

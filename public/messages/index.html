@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Messages · FB Autopilot</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main class="messenger-app">
+    <header class="page-header">
+      <div class="heading-copy"><span class="eyebrow">MY FB AUTOPILOT / INBOX</span><h1>Messages</h1><p>Review conversations and respond from your page.</p></div>
+      <div class="header-actions"><span id="connectionStatus" class="connection-pill"><i></i> Connecting</span><button id="refreshMessages" class="button button-quiet" type="button">↻ Refresh</button></div>
+    </header>
+
+    <section class="inbox-layout">
+      <aside class="conversation-panel">
+        <div class="panel-title"><div><h2>Conversations</h2><p id="conversationCount">Loading inbox…</p></div><span class="inbox-icon">✉</span></div>
+        <label class="search-box"><span>⌕</span><input id="conversationSearch" type="search" placeholder="Search conversations…" autocomplete="off"></label>
+        <nav class="filter-tabs" aria-label="Conversation filters">
+          <button type="button" class="filter-tab active" data-filter="all" aria-selected="true">All <span id="allCount">0</span></button>
+          <button type="button" class="filter-tab" data-filter="flagged" aria-selected="false">Flagged <span id="flaggedCount">0</span></button>
+          <button type="button" class="filter-tab" data-filter="unread" aria-selected="false">Unread <span id="unreadCount">0</span></button>
+        </nav>
+        <div id="conversationList" class="conversation-list" aria-live="polite"></div>
+        <div id="conversationEmpty" class="empty-state hidden"><span>✉</span><strong>No conversations found</strong><p>Try another filter or search.</p></div>
+      </aside>
+
+      <section class="chat-panel" aria-label="Active conversation">
+        <div id="chatPlaceholder" class="chat-placeholder"><div class="placeholder-icon">☏</div><h2>Select a conversation</h2><p>Choose a thread from the inbox to view its messages.</p></div>
+        <div id="activeChat" class="active-chat hidden">
+          <header class="chat-header">
+            <div class="person-avatar" id="activeAvatar">?</div>
+            <div class="person-info"><h2 id="activeName">Conversation</h2><p id="activeMeta">Facebook Messenger</p></div>
+            <div id="activeFlags" class="active-flags"></div>
+          </header>
+          <div id="flagNotice" class="flag-notice hidden"></div>
+          <div id="messageViewport" class="message-viewport" aria-live="polite"></div>
+          <section class="reply-tools">
+            <div class="suggested-heading"><span class="spark">✦</span><strong>Gemini suggested replies</strong><span class="suggested-hint">Tap to use</span></div>
+            <div id="suggestedReplies" class="suggested-replies"></div>
+            <div class="composer">
+              <textarea id="replyInput" rows="2" maxlength="2000" placeholder="Write a reply…" aria-label="Reply message"></textarea>
+              <button id="sendReply" class="button button-primary" type="button"><span>➤</span> Send</button>
+            </div>
+            <div class="composer-footer"><span>Replies are sent as your Facebook Page.</span><span id="replyLength">0 / 2000</span></div>
+          </section>
+        </div>
+      </section>
+    </section>
+  </main>
+  <div id="toastRegion" class="toast-region" aria-live="polite"></div>
+  <script type="module" src="./messages.js"></script>
+</body>
+</html>

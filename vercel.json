@@ -1,0 +1,13 @@
+{
+  "version": 2,
+  "crons": [
+    {
+      "path": "/api/scheduler/check-and-post?slot=early",
+      "schedule": "0 21 * * *"
+    },
+    {
+      "path": "/api/scheduler/check-and-post?slot=afternoon",
+      "schedule": "0 9 * * *"
+    }
+  ]
+}

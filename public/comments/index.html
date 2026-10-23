@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Comments Moderation · FB Autopilot</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main class="comments-app">
+    <header class="page-header">
+      <div><p class="eyebrow">MY FB AUTOPILOT / COMMUNITY</p><h1>Comments Moderation</h1><p class="page-subtitle">Review comments, reply to customers, and moderate your page.</p></div>
+      <div class="header-actions"><span id="connectionStatus" class="connection-pill"><i></i> Connecting</span><button id="refreshComments" class="button button-quiet" type="button">↻ Refresh</button></div>
+    </header>
+
+    <section class="summary-row">
+      <article class="summary-card"><span class="summary-label">All comments</span><strong id="allCount">—</strong><span class="summary-symbol blue">▤</span></article>
+      <article class="summary-card"><span class="summary-label">Flagged / toxic</span><strong id="flaggedCount">—</strong><span class="summary-symbol red">!</span></article>
+      <article class="summary-card"><span class="summary-label">Hidden by AI</span><strong id="hiddenCount">—</strong><span class="summary-symbol amber">◉</span></article>
+      <article class="summary-card"><span class="summary-label">Needs attention</span><strong id="attentionCount">—</strong><span class="summary-symbol purple">✦</span></article>
+    </section>
+
+    <section class="moderation-panel">
+      <div class="toolbar">
+        <div class="filter-tabs" role="tablist" aria-label="Comment filters">
+          <button class="filter-tab active" data-filter="all" type="button" aria-selected="true">All comments</button>
+          <button class="filter-tab" data-filter="toxic" type="button" aria-selected="false">Flagged / toxic</button>
+          <button class="filter-tab" data-filter="hidden" type="button" aria-selected="false">Hidden by AI</button>
+          <button class="filter-tab" data-filter="attention" type="button" aria-selected="false">Needs attention</button>
+        </div>
+        <label class="search-box"><span>⌕</span><input id="commentSearch" type="search" placeholder="Search comments or users…" autocomplete="off"></label>
+      </div>
+      <div class="results-heading"><div><h2>Recent comments</h2><p id="resultCount">Loading comments…</p></div><span class="safe-label"><i></i> Actions require confirmation where destructive</span></div>
+      <div id="commentsGrid" class="comments-grid" aria-live="polite"></div>
+      <div id="emptyState" class="empty-state hidden"><span>▤</span><strong>No comments found</strong><p>Try a different filter or search term.</p></div>
+    </section>
+  </main>
+
+  <dialog id="confirmDialog" class="confirm-dialog">
+    <form method="dialog" id="confirmForm">
+      <div class="dialog-icon" id="confirmIcon">!</div>
+      <h2 id="confirmTitle">Confirm action</h2>
+      <p id="confirmMessage">Are you sure you want to continue?</p>
+      <div class="dialog-actions"><button id="cancelConfirm" class="button button-quiet" value="cancel" type="button">Cancel</button><button id="acceptConfirm" class="button button-danger" value="confirm" type="submit">Confirm</button></div>
+    </form>
+  </dialog>
+  <div id="toastRegion" class="toast-region" aria-live="polite"></div>
+  <script type="module" src="./comments.js"></script>
+</body>
+</html>

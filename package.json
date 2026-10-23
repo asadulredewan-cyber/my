@@ -1,0 +1,21 @@
+{
+  "name": "my-fb-autopilot",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "vercel dev",
+    "deploy": "vercel deploy",
+    "deploy:prod": "vercel deploy --prod",
+    "check": "node --check api/scheduler/check-and-post.js && node --check lib/firebase-admin.js && node --check lib/facebook.js && node --check lib/gemini.js"
+  },
+  "dependencies": {
+    "firebase-admin": "^13.5.0"
+  },
+  "devDependencies": {
+    "vercel": "^48.0.0"
+  }
+}
