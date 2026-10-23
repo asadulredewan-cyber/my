@@ -9,7 +9,7 @@ const API = {
   posts: "/api/posts/get-posts",
   schedule: "/api/posts/manual-schedule",
   image: "/api/posts/generate-image",
-  caption: "/api/posts/generate-caption"
+  caption: "/api/posts/manual-schedule"
 };
 
 const $ = (selector, root = document) => root.querySelector(selector);
@@ -224,7 +224,7 @@ function updateSummary(payload) {
   $("#queueTabCount").textContent = String(lists.firebaseQueue.length);
   $("#publishedTabCount").textContent = String(lists.published.length);
 
-  const connected = payload?.pageConnected ?? payload?.connected ?? payload?.page?.connected;
+ const connected = payload?.pageConnected ?? payload?.data?.pageConnected ?? payload?.connected ?? payload?.page?.connected ?? payload?.data?.page?.connected;
   const pageStatus = $("#pageStatus");
   if (connected === true) {
     pageStatus.className = "status-pill status-connected";
