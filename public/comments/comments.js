@@ -6,15 +6,19 @@
  */
 const API = {
   list: "/api/comments/get-comments",
-  reply: "/api/comments/reply-comment",
-  moderate: "/api/comments/moderate-comment"
+  action: "/api/comments/comment-action"
 };
 const $ = (s, r = document) => r.querySelector(s);
 const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 const state = { filter: "all", comments: [], pendingAction: null, busyIds: new Set() };
 
 function toast(message, type = "success", duration = 3600) {
-  const region = $("#toastRegion"), item = document.createElement("div");
+  const region = $("#toastRegion");
+  if (!region) {
+    console[type === "error" ? "error" : "log"](message);
+    return;
+  }
+  const item = document.createElement("div");
   item.className = `toast ${type}`;
   const icon = document.createElement("span"); icon.className = "toast-icon"; icon.textContent = type === "error" ? "!" : "✓";
   const text = document.createElement("p"); text.textContent = message;
@@ -130,11 +134,11 @@ function createCommentCard(c) {
   if (c.toxic) {
     body.classList.add("is-masked"); body.tabIndex = 0; body.setAttribute("aria-label", "Flagged comment text. Focus or hover to reveal.");
   }
-  const card = document.createElement("div"); card.className = "post-context";
+  const postCard = document.createElement("div"); postCard.className = "post-context";
   const contextLabel = document.createElement("div"); contextLabel.className = "post-context-label"; contextLabel.textContent = "Related post";
   const snippet = document.createElement("div"); snippet.className = "post-snippet"; snippet.textContent = c.postSnippet || "No post snippet provided.";
   const postId = document.createElement("div"); postId.className = "post-id"; postId.textContent = c.postId ? `Post ID: ${c.postId}` : "Post ID unavailable";
-  card.append(contextLabel, snippet, postId);
+  postCard.append(contextLabel, snippet, postId);
 
   const wrap = document.createElement("div");
   if (c.toxic) { const note = document.createElement("p"); note.className = "mask-note"; note.textContent = "Flagged text is blurred for review. Hover or focus to reveal."; wrap.append(note); }
@@ -163,10 +167,9 @@ function createCommentCard(c) {
   hideButton.addEventListener("click", () => performModeration(c, c.hidden ? "unhide" : "hide", card));
   const deleteButton = document.createElement("button"); deleteButton.type = "button"; deleteButton.className = "button button-quiet"; deleteButton.textContent = "Delete";
   deleteButton.addEventListener("click", () => openConfirmation({ title: "Delete this comment?", message: "This action cannot usually be undone. The comment will be removed from the page if Facebook accepts the request.", confirmText: "Delete comment", danger: true, action: () => performModeration(c, "delete", card, true) }));
-  const blockButton = document.createElement("button"); blockButton.type = "button"; blockButton.className = "button button-quiet"; blockButton.textContent = "Block user";
-  blockButton.addEventListener("click", () => openConfirmation({ title: "Block this user?", message: "Blocking affects the Facebook Page and may prevent the person from interacting with it. Continue only if your backend supports this action.", confirmText: "Block user", danger: true, action: () => performModeration(c, "block", card) }));
-  actions.append(replyButton, hideButton, deleteButton, blockButton);
-  card.append(top, wrap, card, thread, replyBox, actions);
+  // User blocking is intentionally omitted: the provided backend does not implement it.
+  actions.append(replyButton, hideButton, deleteButton);
+  card.append(top, wrap, postCard, thread, replyBox, actions);
   return card;
 }
 function openConfirmation(options) {
@@ -189,7 +192,7 @@ async function performModeration(comment, action, card, removeAfter = false) {
   state.busyIds.add(comment.id);
   try {
     const payload = { commentId: comment.id, action };
-    await request(API.moderate, { method: "POST", body: JSON.stringify(payload) });
+    await request(API.action, { method: "POST", body: JSON.stringify(payload) });
     if (action === "delete" || action === "block") {
       state.comments = state.comments.filter(item => item.id !== comment.id);
       card.remove();
@@ -213,7 +216,7 @@ async function submitReply(comment, message, button, card) {
   if (state.busyIds.has(comment.id)) return;
   state.busyIds.add(comment.id); button.disabled = true; button.textContent = "Sending…";
   try {
-    await request(API.reply, { method: "POST", body: JSON.stringify({ commentId: comment.id, message: text }) });
+    await request(API.action, { method: "POST", body: JSON.stringify({ action: "reply", commentId: comment.id, message: text }) });
     comment.replies.push({ authorName: "Page", message: text });
     toast("Reply sent successfully.", "success");
     renderComments();
